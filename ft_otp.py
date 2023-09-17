@@ -15,6 +15,9 @@
 import argparse
 import time
 from cryptography.fernet import Fernet
+import hmac
+import struct
+import hashlib
 
 # X represents the time step in seconds (default value X = 30 seconds) and is a system parameter.
 X = 30
@@ -30,9 +33,14 @@ def encrypt_key(K: str):
     with open("ft_otp.key", "wb") as filekey:
         filekey.write(encrypted_key)
 
-def HOTP(K: str, T: int):
-    print(f"K: {K}")
-    print(f"T: {T}")
+def generateTOTP(K: str, T: int):
+    K_bytes = bytes.fromhex(K)
+    msg = struct.pack(">Q", T) # encode in big endian 8 bytes
+    hmac_result = hmac.new(K_bytes, msg, hashlib.sha1).digest() # calcul a HMAC hash with SHA-1
+    selected_byte = hmac_result[19] & 15
+    result = (struct.unpack(">I", hmac_result[selected_byte:selected_byte+4])[0] & 0x7fffffff) % 1000000
+    otp_str = str(result)
+    return (otp_str.zfill(6))
 
 def parse_arguments():
     desc = "A simple TOTP (Time-based One-Time Password) system capable of generating ephemeral passwords from a master key."
@@ -43,7 +51,8 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
-    K = "This is a key"
+    K = "17f019ff2069c3d054706b6348"
     if args.generate:
         encrypt_key(K)
-    HOTP(K, T)
+    otp_code = generateTOTP(K, T)
+    print(otp_code)
