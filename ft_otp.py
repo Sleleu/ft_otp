@@ -73,10 +73,14 @@ if __name__ == "__main__":
 		if args.master is None:
 			print("usage: argument '-m', '--master' MASTER_KEY is required to decrypt ft_opt.key")
 			exit(1)
-		with open("ft_otp.key") as file:
-			otp_key = file.read()
-		with open("master.key") as file:
-			master_key = file.read()
+		try:
+			with open(args.key[0]) as file:
+				otp_key = file.read()
+			with open(args.master[0]) as file:
+				master_key = file.read()
+		except FileNotFoundError as Error:
+			print(f"./ft_otp.py: error: {Error.filename} does not exist.")
+			exit(1)
 		decrypted_otp_key = decrypt_key(otp_key.encode(), master_key.encode())
 		otp_code = generateTOTP(decrypted_otp_key.decode(), T, args.digits)
 		print(otp_code)
