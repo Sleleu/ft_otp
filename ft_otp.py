@@ -76,7 +76,7 @@ def getKeyFromArg(g_arg):
 	try:
 		assert len(K) >= 64
 		bytes.fromhex(K)
-	except AssertionError or ValueError:
+	except (AssertionError, ValueError):
 		print("./ft_otp: error: key must be 64 hexadecimal characters")
 		exit(1)
 	return (K)
