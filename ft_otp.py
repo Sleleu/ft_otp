@@ -14,7 +14,7 @@
 
 import argparse, time
 import hmac, struct, hashlib
-from cryptography.fernet import Fernet
+from ft_encryption import encrypt_key, decrypt_key
 
 # X represents the time step in seconds (default value X = 30 seconds) and is a system parameter.
 X = 30
@@ -23,29 +23,22 @@ T0 = 0
 # T is an integer and represents the number of time steps between the initial counter time T0 and the current Unix time.
 T = (int(time.time()) - T0) // X
 
-def encrypt_key(K):
-	fernet_key: bytes = Fernet.generate_key()
-	cipher = Fernet(fernet_key) # Create fernet instance
-	encrypted_key: bytes = cipher.encrypt(K.encode()) # encrypt K in cipher
-	with open("ft_otp.key", "wb") as filekey:
-		filekey.write(encrypted_key)
-	print("Key was successfully saved in ft_otp.key.")
-	with open("ft_master.key", "wb") as masterkey:
-		masterkey.write(fernet_key)
-	print("Master key was successfully saved in ft_master.key. Use this master key to read ft_otp.key and create TOTP password")
-
-def decrypt_key(K: str, master_key: str):
-	cipher = Fernet(master_key)
-	decrypted_otp_key = cipher.decrypt(K)
-	return (decrypted_otp_key)
-
 def generateTOTP(K: str, T: int):
 	K_bytes = bytes.fromhex(K)
 	msg = struct.pack(">Q", T) # encode in big endian 8 bytes
-	hmac_result = hmac.new(K_bytes, msg, hashlib.sha1).digest() # calcul a HMAC hash with SHA-1
-	selected_byte = hmac_result[19] & 15
-	result = (struct.unpack(">I", hmac_result[selected_byte:selected_byte+4])[0] & 0x7fffffff) % 1000000
-	otp_str = str(result)
+
+	DIGITS_POWER = [1,10,100,1000,10000,100000,1000000,10000000,100000000]
+    #  0 1  2   3    4     5      6       7        8
+
+	hash = hmac.new(K_bytes, msg, hashlib.sha1).digest()
+	offset = hash[-1] & 0xf
+
+	binary = ((hash[offset] & 0x7f) << 24)     | \
+			 ((hash[offset + 1] & 0xff) << 16) | \
+			 ((hash[offset + 2] & 0xff) << 8)  | \
+			 (hash[offset + 3] & 0xff)
+	otp = binary % DIGITS_POWER[6]				
+	otp_str = str(otp)
 	return (otp_str.zfill(6))
 
 def parse_arguments():
@@ -65,7 +58,7 @@ def getKeyFromArg(g_arg):
 	try:
 		assert len(K) >= 64
 		bytes.fromhex(K)
-	except AssertionError and ValueError:
+	except AssertionError or ValueError:
 		print("./ft_otp: error: key must be 64 hexadecimal characters")
 		exit(1)
 	return (K)
@@ -81,7 +74,7 @@ if __name__ == "__main__":
 			exit(1)
 		with open("ft_otp.key") as file:
 			otp_key = file.read()
-		with open("ft_master.key") as file:
+		with open("master.key") as file:
 			master_key = file.read()
 		decrypted_otp_key = decrypt_key(otp_key.encode(), master_key.encode())
 		otp_code = generateTOTP(decrypted_otp_key.decode(), T)
