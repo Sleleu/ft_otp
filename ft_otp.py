@@ -23,7 +23,7 @@ T0 = 0
 # T is an integer and represents the number of time steps between the initial counter time T0 and the current Unix time.
 T = (int(time.time()) - T0) // X
 
-def generateTOTP(K: str, T: int):
+def generateTOTP(K: str, T: int, digits: int):
 	K_bytes = bytes.fromhex(K)
 	msg = struct.pack(">Q", T) # encode in big endian 8 bytes
 
@@ -37,9 +37,9 @@ def generateTOTP(K: str, T: int):
 			 ((hash[offset + 1] & 0xff) << 16) | \
 			 ((hash[offset + 2] & 0xff) << 8)  | \
 			 (hash[offset + 3] & 0xff)
-	otp = binary % DIGITS_POWER[6]				
+	otp = binary % DIGITS_POWER[digits]				
 	otp_str = str(otp)
-	return (otp_str.zfill(6))
+	return (otp_str.zfill(digits))
 
 def parse_arguments():
 	desc = "A simple TOTP (Time-based One-Time Password) system capable of generating ephemeral passwords from a master key."
@@ -47,6 +47,7 @@ def parse_arguments():
 	parser.add_argument("-g", "--generate", nargs=1, help="receives as argument a hexadecimal key of at least 64 characters. The program stores this key safely in a file called ft_otp.key, which is encrypted.")
 	parser.add_argument("-k", "--key", nargs=1, help="generates a new temporary password based on the key given as argument and prints it on the standard output.")
 	parser.add_argument("-m", "--master", nargs=1, help="Use this master key to read ft_otp.key and create TOTP password")
+	parser.add_argument("-d", "--digits", default=6, type=int, choices=range(4, 9), help="Select the number of digits (between 1 and 8) for the TOTP password. 6 digits by default")
 	return (parser.parse_args())
 
 def getKeyFromArg(g_arg):
@@ -77,7 +78,7 @@ if __name__ == "__main__":
 		with open("master.key") as file:
 			master_key = file.read()
 		decrypted_otp_key = decrypt_key(otp_key.encode(), master_key.encode())
-		otp_code = generateTOTP(decrypted_otp_key.decode(), T)
+		otp_code = generateTOTP(decrypted_otp_key.decode(), T, args.digits)
 		print(otp_code)
 
 # test hex deae08f2811b288ff820ae57cfd0d9a6c3171cf52fa37fad50fe73613cd67aeb
