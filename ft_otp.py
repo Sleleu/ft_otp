@@ -23,7 +23,7 @@ T0 = 0
 # T is an integer and represents the number of time steps between the initial counter time T0 and the current Unix time.
 T = (int(time.time()) - T0) // X
 
-def encrypt_key(K: str):
+def encrypt_key(K):
 	fernet_key: bytes = Fernet.generate_key()
 	cipher = Fernet(fernet_key) # Create fernet instance
 	encrypted_key: bytes = cipher.encrypt(K.encode()) # encrypt K in cipher
@@ -56,10 +56,24 @@ def parse_arguments():
 	parser.add_argument("-m", "--master", nargs=1, help="Use this master key to read ft_otp.key and create TOTP password")
 	return (parser.parse_args())
 
+def getKeyFromArg(g_arg):
+	try:
+		with open(g_arg, "r") as file:
+			K = file.read()
+	except FileNotFoundError:
+		K = g_arg
+	try:
+		assert len(K) >= 64
+		bytes.fromhex(K)
+	except AssertionError and ValueError:
+		print("./ft_otp: error: key must be 64 hexadecimal characters")
+		exit(1)
+	return (K)
+
 if __name__ == "__main__":
 	args = parse_arguments()
 	if args.generate:
-		K = args.generate
+		K = getKeyFromArg(args.generate[0])
 		encrypt_key(K)
 	elif args.key:
 		if args.master is None:
@@ -73,4 +87,4 @@ if __name__ == "__main__":
 		otp_code = generateTOTP(decrypted_otp_key.decode(), T)
 		print(otp_code)
 
-# test hex 17f019ff2069c3d054706b6348
+# test hex deae08f2811b288ff820ae57cfd0d9a6c3171cf52fa37fad50fe73613cd67aeb
