@@ -12,16 +12,18 @@
 #                                                                              #
 # **************************************************************************** #
 
-import argparse, time
+import argparse, time, datetime
 import hmac, struct, hashlib
 from ft_encryption import encrypt_key, decrypt_key
+
+TIME = int(time.time())
 
 # X represents the time step in seconds (default value X = 30 seconds) and is a system parameter.
 X = 30
 # T0 is the Unix time to start counting time steps  (default value is 0, i.e., the Unix epoch) and is also a system parameter.
 T0 = 0
 # T is an integer and represents the number of time steps between the initial counter time T0 and the current Unix time.
-T = (int(time.time()) - T0) // X
+T = (TIME - T0) // X
 
 def generateTOTP(K: str, T: int, digits: int):
 	K_bytes = bytes.fromhex(K)
@@ -46,8 +48,9 @@ def parse_arguments():
 	parser = argparse.ArgumentParser(description=desc)
 	parser.add_argument("-g", "--generate", nargs=1, help="receives as argument a hexadecimal key of at least 64 characters. The program stores this key safely in a file called ft_otp.key, which is encrypted.")
 	parser.add_argument("-k", "--key", nargs=1, help="generates a new temporary password based on the key given as argument and prints it on the standard output.")
-	parser.add_argument("-m", "--master", nargs=1, help="Use this master key to read ft_otp.key and create TOTP password")
-	parser.add_argument("-d", "--digits", default=6, type=int, choices=range(4, 9), help="Select the number of digits (between 1 and 8) for the TOTP password. 6 digits by default")
+	parser.add_argument("-m", "--master", nargs=1, help="use this master key to read ft_otp.key and create TOTP password")
+	parser.add_argument("-d", "--digits", default=6, type=int, choices=range(4, 9), help="select the number of digits (between 1 and 8) for the TOTP password. 6 digits by default")
+	parser.add_argument("-v", "--verbose", action="store_true", help="show verbose output")
 	return (parser.parse_args())
 
 def getKeyFromArg(g_arg):
@@ -63,6 +66,20 @@ def getKeyFromArg(g_arg):
 		print("./ft_otp: error: key must be 64 hexadecimal characters")
 		exit(1)
 	return (K)
+
+def displayVerboseOutput(hexa: bytes, digits: int, T: int):
+	date = datetime.datetime.utcnow()
+	month = str(date.month).zfill(2)
+	day = str(date.day).zfill(2)
+	print(f"Hex secret: {bytes.decode(hexa)}")
+	print(f"Digits: {digits}")
+	print(f"TOTP mode: SHA1")
+	print(f"Step size (seconds): {X}")
+	print(f"Start time: 1970-01-01 00:00:00 UTC ({T0})")
+	print(f"Current time: {date.year}-{month}-{day}", end="")
+	print(f" {str(date.hour).zfill(2)}:{str(date.minute).zfill(2)}:{str(date.second).zfill(2)}", end="")
+	print(f" UTC ({TIME})")
+	print(f"Counter: {hex(T).upper()} ({T})\n")
 
 if __name__ == "__main__":
 	args = parse_arguments()
@@ -83,6 +100,8 @@ if __name__ == "__main__":
 			exit(1)
 		decrypted_otp_key = decrypt_key(otp_key.encode(), master_key.encode())
 		otp_code = generateTOTP(decrypted_otp_key.decode(), T, args.digits)
+		if args.verbose is True:
+			displayVerboseOutput(decrypted_otp_key, args.digits, T)
 		print(otp_code)
 
 # test hex deae08f2811b288ff820ae57cfd0d9a6c3171cf52fa37fad50fe73613cd67aeb
