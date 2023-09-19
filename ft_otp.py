@@ -25,6 +25,20 @@ T0 = 0
 # T is an integer and represents the number of time steps between the initial counter time T0 and the current Unix time.
 T = (TIME - T0) // X
 
+LIGHT_CYAN = "\033[1;36m"
+END = "\033[0m"
+
+ascii_header = """
+
+███████╗████████╗      ██████╗ ████████╗██████╗ 
+██╔════╝╚══██╔══╝     ██╔═══██╗╚══██╔══╝██╔══██╗
+█████╗     ██║        ██║   ██║   ██║   ██████╔╝
+██╔══╝     ██║        ██║   ██║   ██║   ██╔═══╝ 
+██║        ██║███████╗╚██████╔╝   ██║   ██║     
+╚═╝        ╚═╝╚══════╝ ╚═════╝    ╚═╝   ╚═╝     
+			Created by : https://github.com/Sleleu
+"""
+
 def generateTOTP(K: str, T: int, digits: int):
 	K_bytes = bytes.fromhex(K)
 	msg = struct.pack(">Q", T) # encode in big endian 8 bytes
@@ -82,6 +96,7 @@ def displayVerboseOutput(hexa: bytes, digits: int, T: int):
 	print(f"Counter: {hex(T).upper()} ({T})\n")
 
 if __name__ == "__main__":
+	print(f"{LIGHT_CYAN}{ascii_header}{END}")
 	args = parse_arguments()
 	if args.generate:
 		K = getKeyFromArg(args.generate[0])
@@ -103,5 +118,3 @@ if __name__ == "__main__":
 		if args.verbose is True:
 			displayVerboseOutput(decrypted_otp_key, args.digits, T)
 		print(otp_code)
-
-# test hex deae08f2811b288ff820ae57cfd0d9a6c3171cf52fa37fad50fe73613cd67aeb
